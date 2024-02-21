@@ -49,7 +49,6 @@ controller.regSeller = async (req, res) => {
 controller.editSeller = async (req, res) => {
   try {
     const { sellers } = req.body
-
     userSeller = await Sellers.editSeller(sellers)
     res.status(userSeller.code).json(userSeller)
   

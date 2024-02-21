@@ -148,14 +148,16 @@ const editSeller = async (sellers) => {
     const SellersnotCompleted = []
 
     for (const info of sellers) {
-      const { id_seller, fullname, address, email, phone, direction, state , sector } = info
+      const { id_seller, fullname, address, email, password, phone, direction, state , sector } = info
 
       const connection = await pool.getConnection()
 
       const [verify] = await connection.execute(`SELECT id_seller FROM sellers WHERE id_seller = ?;`, [id_seller])
 
       if (verify.length > 0) {
-        const [result] = await connection.execute(`UPDATE sellers SET fullname = ?, address = ?, email = ?, phone = ?, direction = ?, state = ? , sector = ? WHERE id_seller = ?;`, [fullname, address, email, phone, direction, state , sector, id_seller])
+        const hash = await bcrypt.hash(password, 10)
+
+        const [result] = await connection.execute(`UPDATE sellers SET fullname = ?, address = ?, email = ? , password = ?, phone = ?, direction = ?, state = ? , sector = ? WHERE id_seller = ?;`, [fullname, address, email, hash, phone, direction, state , sector, id_seller])
 
         if (result.affectedRows > 0) {
           Sellerscompleted.push({
