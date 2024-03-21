@@ -5,35 +5,18 @@ const controller = {}
 // ----- Save Seller -----
 controller.regSeller = async (req, res) => {
   try {
-    const { sellers } = req.body
+    const seller = {id_boss , fullname , address , email , password , phone, direction, state , sector} = req.body
 
-    const filterSeller = Object.keys(sellers)
+    const filterSeller = Object.keys(seller)
 
     if (filterSeller.length > 0) {
-      const verify = await Sellers.verifySeller(sellers)
+      const verify = await Sellers.verifySeller(seller)
 
-      const regSellers = verify.info.regSeller
-      const sellerExists = verify.info.SellerExists
-
-      let registeredSellers = []
-      let existingSellers = []
-
-      if (regSellers.length > 0) {
-        const userSeller = await Sellers.regSeller(regSellers)
-
-        registeredSellers = userSeller.completed.map(seller => seller.seller)
-        existingSellers = sellerExists.map(seller => seller.email)
-        
-        res.status(userSeller.code).json({
-          message: "Registration process completed",
-          status: true,
-          code: userSeller.code,
-          registeredSellers: registeredSellers,
-          existingSellers: existingSellers,
-          notRegisteredSellers: userSeller.notCompleted
-        })
-      } else {
-        res.status(500).json({ message: "All sellers are already registered", status: false, code: 500 })
+      if (verify.code == 200) {    
+        const processReg = await Sellers.regSeller(seller)        
+        return res.status(processReg.code).json(processReg)       
+      } else{      
+        return res.status(verify.code).json(verify)      
       }
     } else {
       res.status(400).json({ message: "No sellers provided in the request", status: false, code: 400 })
@@ -44,12 +27,12 @@ controller.regSeller = async (req, res) => {
   }
 }
 
-
 // ----- Edit Seller -----
 controller.editSeller = async (req, res) => {
   try {
-    const { sellers } = req.body
-    userSeller = await Sellers.editSeller(sellers)
+    const seller = {id_seller , fullname , address , email , password , phone, direction, state , sector} = req.body
+
+    userSeller = await Sellers.editSeller(seller)
     res.status(userSeller.code).json(userSeller)
   
   } catch (error) {

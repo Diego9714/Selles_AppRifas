@@ -3,36 +3,42 @@ const pool = require('../utils/mysql.connect.js')
 const bcrypt = require("bcrypt")
 
 // ----- Verify Seller -----
-const verifySeller = async (sellers) => {
+const verifySeller = async ({seller}) => {
   try {
+    let msg = {
+      status: false,
+      message: "Seller already exists",
+      code: 500
+    }
+
     const connection = await pool.getConnection()
 
-    const regSeller = []
-    const SellerExists = []
+    const sql = `SELECT id_seller FROM sellers WHERE email = ?;`
+    const [rows] = await connection.execute(sql, [email])
 
-    for (const user of sellers) {
-      const sql = `SELECT id_seller FROM sellers WHERE email = ?;`
-      const [rows] = await connection.execute(sql, [user.email])
+    const sqlSeller = `SELECT id_boss FROM chiefs WHERE email = ?;`
+    const [rowsSeller] = await connection.execute(sqlSeller, [email])
 
-      const sqlSeller = `SELECT id_boss FROM chiefs WHERE email = ?;`
-      const [rowsSeller] = await connection.execute(sqlSeller, [user.email])
-
-      if (rows.length > 0 || rowsSeller.length > 0) {
-        SellerExists.push(user)
-      } else {
-        regSeller.push(user)
+    if (rows.length > 0 || rowsSeller.length > 0) {
+      msg = {
+        status: false,
+        message: "Seller already exists",
+        code: 500,
+        name_user: fullname,
+        address_user: address,
+        email_user: email
+      }
+    } else {
+      msg = {
+        status: true,
+        message: "New seller to register",
+        code: 200,
+        name_user: fullname,
+        address_user: address,
+        email_user: email
       }
     }
-
-    const msg = {
-      status: true,
-      message: regSeller.length > 0 ? "New sellers found" : "All sellers already exist",
-      code: regSeller.length > 0 ? 200 : 404,
-      info: {
-        regSeller,
-        SellerExists
-      }
-    }
+  
 
     connection.release()
 
@@ -49,47 +55,33 @@ const verifySeller = async (sellers) => {
 }
 
 // ----- Save Seller -----
-const regSeller = async (regSellers) => {
+const regSeller = async ({seller}) => {
   try {
-    const Sellerscompleted = []
-    const SellersnotCompleted = []
+    let msg = {
+      status: false,
+      message: "Seller not Registered",
+      code: 500
+    }
 
-    for (const info of regSellers) {
-      const { id_boss , fullname , address , email, password , phone , direction , state , sector } = info
+    const connection = await pool.getConnection()
 
-      const connection = await pool.getConnection()
+    const fechaActual = new Date()
+    const date_created = fechaActual.toISOString().split('T')[0]
 
-      const fechaActual = new Date()
-      const date_created = fechaActual.toISOString().split('T')[0]
+    const hash = await bcrypt.hash(password, 10)
+    let sql = `INSERT INTO sellers ( id_boss , fullname , address , email, password , phone , direction , state , sector ,  activation_status , permit_level , date_created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+    const [result] = await connection.execute(sql, [id_boss , fullname , address , email, hash , phone , direction , state , sector , 1 , 2 , date_created])
 
-      const hash = await bcrypt.hash(password, 10)
-      let sql = `INSERT INTO sellers ( id_boss , fullname , address , email, password , phone , direction , state , sector ,  activation_status , permit_level , date_created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-      const [result] = await connection.execute(sql, [id_boss , fullname , address , email, hash , phone , direction , state , sector , 1 , 2 , date_created])
-
-      if (result.affectedRows > 0) {
-        Sellerscompleted.push({
-          status: true,
-          message: "Seller registered successfully",
-          seller: fullname 
-        })
-      } else {
-        SellersnotCompleted.push({
-          status: false,
-          message: "Seller not registered successfully",
-          seller: fullname 
-        })
+    if (result.affectedRows > 0) {
+      msg = {
+        status: false,
+        message: "Seller registered successfully",
+        code: 200
       }
-
-      connection.release()
     }
 
-    const msg = {
-      status: true,
-      message: "Seller registration process completed",
-      code: 200,
-      completed: Sellerscompleted,
-      notCompleted: SellersnotCompleted
-    }
+    connection.release()
+
 
     return msg
 
@@ -142,54 +134,42 @@ const getSeller = async ({ data }) => {
 }
 
 // ----- Edit Seller -----
-const editSeller = async (sellers) => {
+const editSeller = async ({seller}) => {
   try {
-    const Sellerscompleted = []
-    const SellersnotCompleted = []
+    let msg = {
+      status: false,
+      message: "Seller not edited",
+      code: 500
+    }
 
-    for (const info of sellers) {
-      const { id_seller, fullname, address, email, password, phone, direction, state , sector } = info
+    const connection = await pool.getConnection()
 
-      const connection = await pool.getConnection()
+    const [verify] = await connection.execute(`SELECT id_seller FROM sellers WHERE id_seller = ?;`, [id_seller])
 
-      const [verify] = await connection.execute(`SELECT id_seller FROM sellers WHERE id_seller = ?;`, [id_seller])
+    if (verify.length > 0) {
+      const hash = await bcrypt.hash(password, 10)
 
-      if (verify.length > 0) {
-        const hash = await bcrypt.hash(password, 10)
+      const [result] = await connection.execute(`UPDATE sellers SET fullname = ?, address = ?, email = ? , password = ?, phone = ?, direction = ?, state = ? , sector = ? WHERE id_seller = ?;`, [fullname, address, email, hash, phone, direction, state , sector, id_seller])
 
-        const [result] = await connection.execute(`UPDATE sellers SET fullname = ?, address = ?, email = ? , password = ?, phone = ?, direction = ?, state = ? , sector = ? WHERE id_seller = ?;`, [fullname, address, email, hash, phone, direction, state , sector, id_seller])
-
-        if (result.affectedRows > 0) {
-          Sellerscompleted.push({
-            status: true,
-            message: "Seller edited successfully",
-            seller: fullname
-          })
-        } else {
-          SellersnotCompleted.push({
-            status: false,
-            message: "Seller not edited successfully",
-            seller: fullname
-          })
-        }
-      } else {
-        SellersnotCompleted.push({
-          status: false,
-          message: "Seller not found",
+      if (result.affectedRows > 0) {
+        msg = {
+          status: true,
+          message: "Seller edited successfully",
+          code: 200,
           seller: fullname
-        })
+        }
       }
-
-      connection.release()
+    } else {
+      msg = {
+        status: false,
+        message: "Seller not found",
+        code: 500,
+        seller: fullname
+      }
     }
 
-    const msg = {
-      status: true,
-      message: "Edit process completed",
-      code: 200,
-      completed: Sellerscompleted,
-      notCompleted: SellersnotCompleted
-    }
+    connection.release()
+    
 
     return msg
 
